@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Dashboard from "./components/Dashboard";
 import Construtoras from "./components/Construtoras";
 import Obras from "./components/Obras";
@@ -12,47 +12,16 @@ import Usuarios from "./components/Usuarios";
 import Login from "./components/Login";
 import ListaDeTarefas from "./components/ListaDeTarefas";
 
+// 👇 Simula um login automático como admin
+const usuarioAdminSimulado = {
+  nome: "Admin (acesso automático)",
+  tipo: "admin",
+};
+
 export default function App() {
   const [selectedPage, setSelectedPage] = useState("dashboard");
   const [menuAberto, setMenuAberto] = useState(false);
-  const [usuarioLogado, setUsuarioLogado] = useState(null);
-
-  useEffect(() => {
-    const salvo = JSON.parse(localStorage.getItem("usuarioLogado"));
-
-    if (salvo) {
-      setUsuarioLogado(salvo);
-    } else {
-      // Cria usuário temporário (modo livre)
-      const temporario = { nome: "Acesso Temporário", tipo: "admin" };
-      setUsuarioLogado(temporario);
-      localStorage.setItem("usuarioLogado", JSON.stringify(temporario));
-    }
-  }, []);
-
-  if (
-    usuarioLogado?.tipo === "funcionario" &&
-    !["atividades"].includes(selectedPage)
-  ) {
-    setSelectedPage("atividades");
-    return <Atividades />;
-  }
-
-  if (
-    usuarioLogado?.tipo === "gestor" &&
-    !["dashboard", "atividades", "relatoriofinanceiro", "relatorioservicos"].includes(selectedPage)
-  ) {
-    setSelectedPage("dashboard");
-    return <Dashboard />;
-  }
-
-  if (
-    usuarioLogado?.tipo === "cliente" &&
-    selectedPage !== "atividades"
-  ) {
-    setSelectedPage("atividades");
-    return <Atividades />;
-  }
+  const [usuarioLogado, setUsuarioLogado] = useState(usuarioAdminSimulado);
 
   const renderTitle = () => {
     switch (selectedPage) {
@@ -137,6 +106,7 @@ export default function App() {
             onClick={() => {
               localStorage.removeItem("usuarioLogado");
               setUsuarioLogado(null);
+              location.reload();
             }}
             className="text-left text-red-500 hover:text-red-700"
           >
