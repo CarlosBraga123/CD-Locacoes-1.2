@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { db } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function Atividades() {
   const [construtoras, setConstrutoras] = useState([]);
@@ -13,7 +15,6 @@ export default function Atividades() {
     equipamento: "",
     servico: "",
     tamanho: "",
-    tamanhoAnterior: "",
     ancoragem: "",
     dataAgendamento: "",
     dataLiberacao: "",
@@ -23,8 +24,34 @@ export default function Atividades() {
   useEffect(() => {
     setConstrutoras(JSON.parse(localStorage.getItem("construtoras") || "[]"));
     setObras(JSON.parse(localStorage.getItem("obras") || "[]"));
-    setAtividades(JSON.parse(localStorage.getItem("atividades") || "[]"));
+    const atividadesSalvas = JSON.parse(localStorage.getItem("atividades") || "[]");
+    setAtividades(atividadesSalvas);
+
+    verificarSincronizacao(atividadesSalvas);
   }, []);
+
+  const verificarSincronizacao = (dadosLocais) => {
+    const ultimaSync = localStorage.getItem("ultimaSyncAtividades");
+    const agora = Date.now();
+    const duasHoras = 2 * 60 * 60 * 1000;
+
+    if (!ultimaSync || agora - Number(ultimaSync) > duasHoras) {
+      sincronizarComFirebase(dadosLocais);
+      localStorage.setItem("ultimaSyncAtividades", agora.toString());
+    }
+  };
+
+  const sincronizarComFirebase = async (atividadesLocais) => {
+    try {
+      for (const atividade of atividadesLocais) {
+        const docRef = doc(db, "atividades", atividade.id.toString());
+        await setDoc(docRef, atividade);
+      }
+      console.log("✅ Atividades sincronizadas com Firebase.");
+    } catch (erro) {
+      console.error("Erro ao sincronizar atividades:", erro);
+    }
+  };
 
   const formatarData = (data) => {
     if (!data) return "";
@@ -36,8 +63,6 @@ export default function Atividades() {
     const nova = {
       ...form,
       id: form.id || Date.now(),
-      tamanho: form.servico === "Deslocamento" ? form.tamanho : form.tamanho,
-      tamanhoAnterior: form.servico === "Deslocamento" ? form.tamanhoAnterior : "",
     };
 
     const atualizadas = form.id
@@ -54,7 +79,6 @@ export default function Atividades() {
       equipamento: "",
       servico: "",
       tamanho: "",
-      tamanhoAnterior: "",
       ancoragem: "",
       dataAgendamento: "",
       dataLiberacao: "",
@@ -84,18 +108,18 @@ export default function Atividades() {
 
   const materiais = (item) => {
     const lista = [];
+
     const pecasBalancinho = JSON.parse(localStorage.getItem("pecasBalancinho") || "{}");
     const pecasAncoragem = JSON.parse(localStorage.getItem("pecasAncoragem") || "{}");
 
     if (item.equipamento === "Balancinho") {
-      const tamanhoParaUso = item.servico === "Deslocamento" ? item.tamanho : item.tamanho;
-      const peçasTamanho = pecasBalancinho[tamanhoParaUso];
+      const peçasTamanho = pecasBalancinho[item.tamanho];
       if (peçasTamanho) {
-        lista.push(...peçasTamanho.split(",").map((p) => p.trim()));
+        lista.push(...peçasTamanho.split(",").map(p => p.trim()));
       }
       const peçasAncoragem = pecasAncoragem[item.ancoragem];
       if (peçasAncoragem) {
-        lista.push(...peçasAncoragem.split(",").map((p) => p.trim()));
+        lista.push(...peçasAncoragem.split(",").map(p => p.trim()));
       }
     }
 
@@ -133,7 +157,7 @@ export default function Atividades() {
           ))}
         </select>
 
-        <select value={form.equipamento} onChange={(e) => setForm({ ...form, equipamento: e.target.value, servico: "", tamanho: "", tamanhoAnterior: "", ancoragem: "" })} className="border p-2 rounded">
+        <select value={form.equipamento} onChange={(e) => setForm({ ...form, equipamento: e.target.value, servico: "", tamanho: "", ancoragem: "" })} className="border p-2 rounded">
           <option value="">Equipamento</option>
           <option>Balancinho</option>
           <option>Mini Grua</option>
@@ -147,29 +171,12 @@ export default function Atividades() {
 
         {form.equipamento === "Balancinho" && (
           <>
-            {form.servico === "Deslocamento" ? (
-              <>
-                <select value={form.tamanhoAnterior} onChange={(e) => setForm({ ...form, tamanhoAnterior: e.target.value })} className="border p-2 rounded">
-                  <option value="">Tamanho Anterior</option>
-                  {["1", "1.5", "2", "3", "4", "5", "6"].map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-                <select value={form.tamanho} onChange={(e) => setForm({ ...form, tamanho: e.target.value })} className="border p-2 rounded">
-                  <option value="">Tamanho Novo</option>
-                  {["1", "1.5", "2", "3", "4", "5", "6"].map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <select value={form.tamanho} onChange={(e) => setForm({ ...form, tamanho: e.target.value })} className="border p-2 rounded">
-                <option value="">Tamanho</option>
-                {["1", "1.5", "2", "3", "4", "5", "6"].map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            )}
+            <select value={form.tamanho} onChange={(e) => setForm({ ...form, tamanho: e.target.value })} className="border p-2 rounded">
+              <option value="">Tamanho</option>
+              {["1", "1.5", "2", "3", "4", "5", "6"].map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
 
             <select value={form.ancoragem} onChange={(e) => setForm({ ...form, ancoragem: e.target.value })} className="border p-2 rounded">
               <option value="">Ancoragem</option>
@@ -180,26 +187,8 @@ export default function Atividades() {
           </>
         )}
 
-<div className="flex flex-col">
-  <label className="text-sm font-medium text-gray-700 mb-1">Data de Agendamento</label>
-  <input
-    type="date"
-    value={form.dataAgendamento}
-    onChange={(e) => setForm({ ...form, dataAgendamento: e.target.value })}
-    className="border p-2 rounded"
-  />
-</div>
-
-<div className="flex flex-col">
-  <label className="text-sm font-medium text-gray-700 mb-1">Data da Liberação</label>
-  <input
-    type="date"
-    value={form.dataLiberacao}
-    onChange={(e) => setForm({ ...form, dataLiberacao: e.target.value })}
-    className="border p-2 rounded"
-  />
-</div>
-
+        <input type="date" value={form.dataAgendamento} onChange={(e) => setForm({ ...form, dataAgendamento: e.target.value })} className="border p-2 rounded" />
+        <input type="date" value={form.dataLiberacao} onChange={(e) => setForm({ ...form, dataLiberacao: e.target.value })} className="border p-2 rounded" />
       </div>
 
       <textarea placeholder="Observações" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} className="border p-2 rounded w-full" />
@@ -220,12 +209,6 @@ export default function Atividades() {
                 <br />
                 {item.construtora} / {item.obra} <br />
                 Agendado: {formatarData(item.dataAgendamento)} — Liberado: {formatarData(item.dataLiberacao) || "—"}
-                {item.servico === "Deslocamento" && item.tamanhoAnterior && item.tamanhoNovo && (
-  <p className="text-sm text-gray-700 mt-1">
-    🔁 De: {item.tamanhoAnterior}m - Para: {item.tamanhoNovo}m
-  </p>
-)}
-
                 {item.observacoes?.trim() && (
                   <p className="mt-1 text-sm text-gray-700">
                     📝 Observações: {item.observacoes}
