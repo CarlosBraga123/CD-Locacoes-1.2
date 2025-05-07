@@ -256,8 +256,18 @@ export default function Atividades() {
               <span>{item.construtora} | {item.obra}</span>
               <span>{tamanhoInfo}</span>
               <span>Ancoragem: {item.ancoragem}</span>
-              {item.dataAgendamento && <span>Agendamento: {item.dataAgendamento}</span>}
-              {item.dataLiberacao && <span>Liberação: {item.dataLiberacao}</span>}
+              {item.dataAgendamento && (
+  <span>
+    Agendamento:{" "}
+    {new Date(item.dataAgendamento).toLocaleDateString("pt-BR")}
+  </span>
+)}
+{item.dataLiberacao && (
+  <span>
+    Liberação:{" "}
+    {new Date(item.dataLiberacao).toLocaleDateString("pt-BR")}
+  </span>
+)}
 
               {item.observacoes && (
                 <div className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-sm font-medium">
