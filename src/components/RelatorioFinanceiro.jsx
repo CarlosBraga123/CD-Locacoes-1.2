@@ -1,129 +1,156 @@
+// RelatorioFinanceiro.jsx - Versão com tabela e totais
 import { useEffect, useState } from "react";
 
 export default function RelatorioFinanceiro() {
   const [atividades, setAtividades] = useState([]);
-  const [construtoras, setConstrutoras] = useState([]);
-  const [obras, setObras] = useState([]);
-  const [valores, setValores] = useState({});
+  const [filtroConstrutora, setFiltroConstrutora] = useState("");
+  const [filtroObra, setFiltroObra] = useState("");
+  const [filtroMes, setFiltroMes] = useState("");
 
-  const [filtros, setFiltros] = useState({
-    construtora: "",
-    obra: "",
-    dataInicio: "",
-    dataFim: "",
-  });
 
   useEffect(() => {
-    setAtividades(JSON.parse(localStorage.getItem("atividades") || "[]"));
-    setConstrutoras(JSON.parse(localStorage.getItem("construtoras") || "[]"));
-    setObras(JSON.parse(localStorage.getItem("obras") || "[]"));
-    setValores(JSON.parse(localStorage.getItem("valoresServicos") || "{}"));
+    const dados = JSON.parse(localStorage.getItem("atividades")) || [];
+    setAtividades(dados);
   }, []);
 
-  const formatarData = (data) => {
-    if (!data) return "—";
-    const [y, m, d] = data.split("-");
-    return `${d}/${m}/${y}`;
-  };
+  let valoresPadrao = {};
+try {
+  valoresPadrao = JSON.parse(localStorage.getItem("valoresPadrao")) || {};
+} catch {
+  console.warn("Erro ao ler valoresPadrao do localStorage");
+}
 
-  const filtradas = atividades.filter((a) => {
-    const dentroConstrutora = !filtros.construtora || a.construtora === filtros.construtora;
-    const dentroObra = !filtros.obra || a.obra === filtros.obra;
-    const dentroPeriodo =
-      (!filtros.dataInicio || a.dataLiberacao >= filtros.dataInicio) &&
-      (!filtros.dataFim || a.dataLiberacao <= filtros.dataFim);
+const primeiroDiaMesAtual = new Date();
+primeiroDiaMesAtual.setDate(1);
+const mesFormatadoAtual = primeiroDiaMesAtual.toISOString().slice(0, 7);
 
-    return dentroConstrutora && dentroObra && dentroPeriodo;
-  });
+const atividadesFiltradas = atividades.filter((item) => {
+  const matchConstrutora =
+    !filtroConstrutora || item.construtora === filtroConstrutora;
+  const matchObra = !filtroObra || item.obra === filtroObra;
 
-  const calcularTotal = () => {
-    return filtradas.reduce((acc, item) => {
-      const chave = `${item.equipamento}-${item.servico}`;
-      const valor = parseFloat(valores[chave] || 0);
-      return acc + valor;
-    }, 0).toFixed(2);
-  };
+  let matchMes = true;
+  if (filtroMes === "mesAtual") {
+    matchMes = item.dataAgendamento >= primeiroDiaMesAtual.toISOString().slice(0, 10);
+  } else if (filtroMes.startsWith("fechamento:")) {
+    const mesAlvo = filtroMes.split(":"[1]);
+    matchMes = item.dataLiberacao?.slice(0, 7) === mesAlvo;
+  } else if (filtroMes && filtroMes.length === 7) {
+    matchMes = item.dataAgendamento?.startsWith(filtroMes);
+  }
 
-  const exportarWhatsApp = () => {
-    const linhas = filtradas.map((item) => {
-      const chave = `${item.equipamento}-${item.servico}`;
-      const valor = parseFloat(valores[chave] || 0).toFixed(2);
-      return `${item.servico} - ${item.equipamento} (${item.construtora} / ${item.obra}) - ${formatarData(item.dataLiberacao)} - R$ ${valor}`;
-    });
+  return matchConstrutora && matchObra && matchMes;
+});
 
-    const texto = `📊 *Relatório Financeiro*\n\n${linhas.join("\n")}\n\nTotal: R$ ${calcularTotal()}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
-    window.open(url, "_blank");
-  };
+  const totalPrevisto = atividadesFiltradas.reduce((acc, item) => {
+  const chave = `${item.equipamento}-${item.servico}`;
+  const valor = Number(valoresPadrao[chave] || 0);
+  return acc + valor;
+}, 0);
+
+  const totalLiberado = atividadesFiltradas.reduce((acc, item) => {
+  const chave = `${item.equipamento}-${item.servico}`;
+  const valor = Number(valoresPadrao[chave] || 0);
+  return acc + (item.dataLiberacao ? valor : 0);
+}, 0);
 
   return (
-    <div className="p-4 space-y-4">
-      <h2 className="text-lg font-bold">💰 Relatório Financeiro</h2>
+    <div className="p-4">
+      <h2 className="text-xl font-semibold mb-4">Relatório Financeiro</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+      <div className="grid gap-2 mb-4">
         <select
-          value={filtros.construtora}
-          onChange={(e) => setFiltros({ ...filtros, construtora: e.target.value, obra: "" })}
-          className="border p-2 rounded"
+  value={filtroMes}
+  onChange={(e) => setFiltroMes(e.target.value)}
+  className="w-full border rounded-xl px-3 py-2 shadow-sm"
+>
+  <option value="">Todos os meses</option>
+  <option value="mesAtual">Mês Atual</option>
+
+  {/* Fechamentos mensais baseados em data de liberação */}
+  {[...new Set(atividades.map((a) => a.dataLiberacao?.slice(0, 7)))]
+    .filter(Boolean)
+    .sort()
+    .map((mes) => (
+      <option key={`fechamento:${mes}`} value={`fechamento:${mes}`}>
+        Fechamento Mensal ({mes.split("-").reverse().join("/")})
+      </option>
+    ))}
+
+  {/* Meses normais baseados em data de agendamento */}
+  {[...new Set(atividades.map((a) => a.dataAgendamento?.slice(0, 7)))]
+    .filter(Boolean)
+    .sort()
+    .map((mes) => (
+      <option key={mes} value={mes}>
+        {mes.split("-").reverse().join("/")}
+      </option>
+    ))}
+</select>
+        <select
+          value={filtroConstrutora}
+          onChange={(e) => setFiltroConstrutora(e.target.value)}
+          className="w-full border rounded-xl px-3 py-2 shadow-sm"
         >
-          <option value="">Todas as Construtoras</option>
-          {construtoras.map((c) => (
-            <option key={c.id} value={c.nome}>{c.nome}</option>
+          <option value="">Filtrar por Construtora</option>
+          {[...new Set(atividades.map((a) => a.construtora))].map((c) => (
+            <option key={c}>{c}</option>
           ))}
         </select>
 
         <select
-          value={filtros.obra}
-          onChange={(e) => setFiltros({ ...filtros, obra: e.target.value })}
-          className="border p-2 rounded"
+          value={filtroObra}
+          onChange={(e) => setFiltroObra(e.target.value)}
+          className="w-full border rounded-xl px-3 py-2 shadow-sm"
         >
-          <option value="">Todas as Obras</option>
-          {obras
-            .filter((o) => !filtros.construtora || o.construtora === filtros.construtora)
-            .map((o) => (
-              <option key={o.id} value={o.nome}>{o.nome}</option>
-            ))}
+          <option value="">Filtrar por Obra</option>
+          {[...new Set(atividades.map((a) => a.obra))].map((o) => (
+            <option key={o}>{o}</option>
+          ))}
         </select>
-
-        <input
-          type="date"
-          value={filtros.dataInicio}
-          onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-          className="border p-2 rounded"
-        />
-        <input
-          type="date"
-          value={filtros.dataFim}
-          onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-          className="border p-2 rounded"
-        />
       </div>
 
-      <ul className="mt-4 space-y-2">
-        {filtradas.map((item) => {
-          const chave = `${item.equipamento}-${item.servico}`;
-          const valor = parseFloat(valores[chave] || 0).toFixed(2);
-          return (
-            <li key={item.id} className="border p-3 rounded bg-white shadow-sm">
-              <strong>{item.servico} - {item.equipamento}</strong> <br />
-              {item.construtora} / {item.obra} <br />
-              Liberado: {formatarData(item.dataLiberacao)} <br />
-              💲 R$ {valor}
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="mt-4 font-bold">
-        Total: R$ {calcularTotal()}
+      <div className="mb-4">
+        <p className="font-semibold text-gray-800">Total Previsto: R$ {totalPrevisto.toFixed(2)}</p>
+        <p className="font-semibold text-green-700">Total Liberado: R$ {totalLiberado.toFixed(2)}</p>
       </div>
 
-      <button
-        onClick={exportarWhatsApp}
-        className="bg-green-600 text-white px-4 py-2 rounded mt-2"
-      >
-        Enviar por WhatsApp
-      </button>
+      <div className="overflow-auto">
+        <table className="min-w-full border rounded-xl shadow text-sm">
+          <thead>
+            <tr className="bg-gray-100 text-left">
+              <th className="px-4 py-2">Construtora</th>
+              <th className="px-4 py-2">Obra</th>
+              <th className="px-4 py-2">Equipamento</th>
+              <th className="px-4 py-2">Serviço</th>
+              <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2">Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {atividadesFiltradas.map((item) => (
+              <tr key={item.id} className="border-t">
+                <td className="px-4 py-2">{item.construtora}</td>
+                <td className="px-4 py-2">{item.obra}</td>
+                <td className="px-4 py-2">{item.equipamento}</td>
+                <td className="px-4 py-2">{item.servico}</td>
+                <td className="px-4 py-2">
+                  {item.dataLiberacao
+                    ? "CONCLUÍDO"
+                    : item.iniciado
+                    ? "EM ANDAMENTO"
+                    : new Date(item.dataAgendamento) > new Date()
+                    ? "AGENDADO"
+                    : ""}
+                </td>
+                <td className="px-4 py-2">{
+  Number(valoresPadrao[`${item.equipamento}-${item.servico}`] || 0).toFixed(2)
+}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
