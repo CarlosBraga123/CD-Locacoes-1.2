@@ -43,6 +43,27 @@ export default function Configuracoes() {
   return (
     <div className="p-4 space-y-6">
       <h2 className="text-lg font-bold">⚙️ Configurações de Materiais</h2>
+      <button
+        onClick={() => {
+          localStorage.setItem(
+            "valoresPadrao",
+            JSON.stringify({
+              "Balancinho-Deslocamento": "300.00",
+              "Balancinho-Instalação": "300.00",
+              "Balancinho-Manutenção": "120.00",
+              "Balancinho-Remoção": "300.00",
+              "Mini Grua-Ascensão": "450.00",
+              "Mini Grua-Instalação": "1100.00",
+              "Mini Grua-Manutenção": "120.00",
+              "Mini Grua-Remoção": "1100.00"
+            })
+          );
+          alert("Valores padrão salvos com sucesso!");
+        }}
+        className="mb-4 px-4 py-2 bg-green-600 text-white rounded-xl shadow"
+      >
+        Salvar Valores Padrão
+      </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
