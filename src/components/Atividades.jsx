@@ -1,9 +1,10 @@
 // Atividades.jsx - Versão corrigida sem erro de fechamento de JSX
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { db } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
 
 export default function Atividades() {
+  const topoRef = useRef(null);
   const [construtoras, setConstrutoras] = useState([]);
   const [obras, setObras] = useState([]);
   const [atividades, setAtividades] = useState([]);
@@ -39,6 +40,7 @@ export default function Atividades() {
     const novaAtividade = {
       ...form,
       id: form.id || Date.now(),
+      iniciado: form.iniciado || false,
     };
 
     const novas = form.id
@@ -60,10 +62,16 @@ export default function Atividades() {
       dataAgendamento: "",
       dataLiberacao: "",
       observacoes: "",
+      iniciado: false,
     });
   };
 
-  const editar = (item) => setForm(item);
+  const editar = (item) => {
+    setForm(item);
+    setTimeout(() => {
+      topoRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
   const excluir = (id) => {
     const novas = atividades.filter((a) => a.id !== id);
     setAtividades(novas);
@@ -82,13 +90,14 @@ export default function Atividades() {
     return base;
   };
 
-  const tamanhoSelecionado =
+    const tamanhoSelecionado =
     form.servico === "Deslocamento" ? form.tamanhoNovo : form.tamanho;
 
   const materiais = calcularMateriais(tamanhoSelecionado, form.ancoragem);
 
   return (
     <div className="p-4">
+      <div ref={topoRef}></div>
       <h2 className="text-xl font-semibold mb-4">Nova Atividade</h2>
 
       <div className="grid gap-3">
@@ -241,7 +250,14 @@ export default function Atividades() {
 
       <h2 className="text-xl font-semibold mt-6 mb-4">Atividades Salvas</h2>
       <div className="space-y-4">
-        {atividades.map((item) => {
+        {
+          [...atividades].sort((a, b) => {
+            if (a.dataLiberacao && !b.dataLiberacao) return 1;
+            if (!a.dataLiberacao && b.dataLiberacao) return -1;
+            const dataA = new Date(a.dataAgendamento);
+            const dataB = new Date(b.dataAgendamento);
+            return dataA - dataB;
+          }).map((item) => {
           const tamanhoInfo =
             item.servico === "Deslocamento"
               ? `Tamanho: ${item.tamanhoAnterior || ""} ➔ ${item.tamanhoNovo || ""}`
@@ -253,21 +269,28 @@ export default function Atividades() {
               className="border rounded-xl p-4 shadow flex flex-col gap-2 bg-white"
             >
               <strong>{item.servico} - {item.equipamento}</strong>
+              <span className="text-xs font-semibold text-gray-500">
+                Status: {item.dataLiberacao
+                  ? "CONCLUÍDO"
+                  : item.iniciado
+                  ? "EM ANDAMENTO"
+                  : new Date(item.dataAgendamento) > new Date()
+                  ? "AGENDADO"
+                  : ""}
+              </span>
               <span>{item.construtora} | {item.obra}</span>
               <span>{tamanhoInfo}</span>
               <span>Ancoragem: {item.ancoragem}</span>
               {item.dataAgendamento && (
-  <span>
-    Agendamento:{" "}
-    {new Date(item.dataAgendamento).toLocaleDateString("pt-BR")}
-  </span>
-)}
-{item.dataLiberacao && (
-  <span>
-    Liberação:{" "}
-    {new Date(item.dataLiberacao).toLocaleDateString("pt-BR")}
-  </span>
-)}
+                <span>
+                  Agendamento: {item.dataAgendamento.split("-").reverse().join("/")}
+                </span>
+              )}
+              {item.dataLiberacao && (
+                <span>
+                  Liberação: {item.dataLiberacao.split("-").reverse().join("/")}
+                </span>
+              )}
 
               {item.observacoes && (
                 <div className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-sm font-medium">
@@ -276,6 +299,20 @@ export default function Atividades() {
               )}
 
               <div className="flex gap-2 flex-wrap mt-2">
+                {!item.dataLiberacao && !item.iniciado && (
+                  <button
+                    onClick={() => {
+                      const atualizadas = atividades.map((a) =>
+                        a.id === item.id ? { ...a, iniciado: true } : a
+                      );
+                      setAtividades(atualizadas);
+                      localStorage.setItem("atividades", JSON.stringify(atualizadas));
+                    }}
+                    className="bg-white border rounded-xl px-4 py-1 text-orange-600 shadow-sm"
+                  >
+                    Iniciar Serviço
+                  </button>
+                )}
                 {!item.dataLiberacao && (
                   <button
                     onClick={() => {
@@ -311,9 +348,7 @@ export default function Atividades() {
                   onClick={() => toggleMateriais(item.id)}
                   className="bg-white border rounded-xl px-4 py-1 text-gray-700 shadow-sm"
                 >
-                  {mostrarMateriaisId === item.id
-                    ? "Ocultar Materiais"
-                    : "Ver Materiais"}
+                  {mostrarMateriaisId === item.id ? "Ocultar Materiais" : "Ver Materiais"}
                 </button>
               </div>
 
