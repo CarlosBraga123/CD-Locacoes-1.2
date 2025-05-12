@@ -13,22 +13,37 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+type Atividade = {
+  id: string;
+  obra: string;
+  construtora: string;
+  servico: string;
+  equipamento: string;
+  dataAgendamento: string;
+  dataLiberacao?: string;
+};
+
 export default function Agenda() {
   const [modo, setModo] = useState("semana");
   const [referencia, setReferencia] = useState(new Date());
-  const [diaSelecionado, setDiaSelecionado] = useState(null);
+  const [diaSelecionado, setDiaSelecionado] = useState<Date | null>(null);
 
-  const atividades = JSON.parse(localStorage.getItem("atividades")) || [];
+  const atividades: Atividade[] = JSON.parse(localStorage.getItem("atividades") || "[]");
 
   const inicioSemana = startOfWeek(referencia, { weekStartsOn: 1 });
   const diasDaSemana = Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i));
 
+  const baseData = (a: Atividade) =>
+    new Date((a.dataLiberacao || a.dataAgendamento) + "T00:00:00");
+
+  const obterStatus = (a: Atividade) => {
+    if (a.dataLiberacao) return "CONCLUÍDO";
+    if (!a.dataLiberacao && new Date(a.dataAgendamento) <= new Date()) return "EM ANDAMENTO";
+    return "AGENDADO";
+  };
+
   const atividadesPorDia = diasDaSemana.map((dia) => {
-    const atividadesDoDia = atividades.filter((a) => {
-      const dataBase = a.dataLiberacao || a.dataAgendamento;
-      const data = dataBase && new Date(dataBase + "T00:00:00");
-      return data && isSameDay(data, dia);
-    });
+    const atividadesDoDia = atividades.filter((a) => isSameDay(baseData(a), dia));
     return { dia, atividades: atividadesDoDia };
   });
 
@@ -37,19 +52,9 @@ export default function Agenda() {
   const diasDoMes = eachDayOfInterval({ start: inicioMes, end: fimMes });
 
   const atividadesNoMes = diasDoMes.map((dia) => {
-    const atividadesDoDia = atividades.filter((a) => {
-      const dataBase = a.dataLiberacao || a.dataAgendamento;
-      const data = dataBase && new Date(dataBase + "T00:00:00");
-      return data && isSameDay(data, dia);
-    });
+    const atividadesDoDia = atividades.filter((a) => isSameDay(baseData(a), dia));
     return { dia, atividades: atividadesDoDia };
   });
-
-  const obterStatus = (a) => {
-    if (a.dataLiberacao) return "CONCLUÍDO";
-    if (!a.dataLiberacao && new Date(a.dataAgendamento) <= new Date()) return "EM ANDAMENTO";
-    return "AGENDADO";
-  };
 
   return (
     <div className="p-4">
@@ -165,11 +170,7 @@ export default function Agenda() {
               </h3>
               <ul className="space-y-2">
                 {atividades
-                  .filter((a) => {
-                    const dataBase = a.dataLiberacao || a.dataAgendamento;
-                    const data = dataBase && new Date(dataBase + "T00:00:00");
-                    return data && isSameDay(data, diaSelecionado);
-                  })
+                  .filter((a) => isSameDay(baseData(a), diaSelecionado))
                   .map((a) => (
                     <li key={a.id} className="bg-white rounded-xl shadow p-3 text-sm">
                       <div>
