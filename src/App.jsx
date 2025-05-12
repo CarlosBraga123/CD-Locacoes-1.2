@@ -3,7 +3,7 @@ import Dashboard from "./components/Dashboard";
 import Construtoras from "./components/Construtoras";
 import Obras from "./components/Obras";
 import Atividades from "./components/Atividades";
-import Agenda from "./components/Agenda.tsx";
+import Agenda from "./components/Agenda";
 import RelatorioFinanceiro from "./components/RelatorioFinanceiro";
 import RelatorioServicos from "./components/RelatorioServicos";
 import DetalhesObra from "./components/DetalhesObra";
