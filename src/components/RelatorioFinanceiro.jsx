@@ -33,10 +33,10 @@ const atividadesFiltradas = atividades.filter((item) => {
   if (filtroMes === "mesAtual") {
     matchMes = item.dataAgendamento >= primeiroDiaMesAtual.toISOString().slice(0, 10);
   } else if (filtroMes.startsWith("fechamento:")) {
-    const mesAlvo = filtroMes.split(":"[1]);
+    const mesAlvo = filtroMes.split(":")[1];
     matchMes = item.dataLiberacao?.slice(0, 7) === mesAlvo;
   } else if (filtroMes && filtroMes.length === 7) {
-    matchMes = item.dataAgendamento?.startsWith(filtroMes);
+    matchMes = item.dataAgendamento?.slice(0, 7) === filtroMes;
   }
 
   return matchConstrutora && matchObra && matchMes;
