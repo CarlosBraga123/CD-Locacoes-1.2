@@ -75,7 +75,7 @@ export default function Agenda() {
           </div>
           <div className="grid gap-4">
             {atividadesPorDia.map(({ dia, atividades }) => (
-              <div key={dia} className="bg-white rounded-2xl shadow p-4">
+              <div key={dia.toISOString()} className="bg-white rounded-2xl shadow p-4">
                 <h3 className="font-semibold text-gray-700 mb-2">
                   {format(dia, "EEEE dd/MM", { locale: ptBR })}
                 </h3>
@@ -105,7 +105,6 @@ export default function Agenda() {
             {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((dia) => (
               <div key={dia} className="font-semibold mb-1">{dia}</div>
             ))}
-
             {(() => {
               const primeiroDiaSemana = getDay(inicioMes) || 7;
               const vazios = Array.from({ length: primeiroDiaSemana - 1 });
@@ -113,7 +112,7 @@ export default function Agenda() {
                 ...vazios.map((_, i) => <div key={`vazio-${i}`}></div>),
                 ...atividadesNoMes.map(({ dia, atividades }) => (
                   <div
-                    key={dia}
+                    key={dia.toISOString()}
                     onClick={() => setDiaSelecionado(dia)}
                     className="bg-white rounded-xl shadow p-1 min-h-[60px] text-xs flex flex-col items-start cursor-pointer hover:bg-gray-100"
                   >
