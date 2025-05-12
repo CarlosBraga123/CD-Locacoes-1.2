@@ -3,6 +3,7 @@ import Dashboard from "./components/Dashboard";
 import Construtoras from "./components/Construtoras";
 import Obras from "./components/Obras";
 import Atividades from "./components/Atividades";
+import Agenda from "./components/Agenda";
 import RelatorioFinanceiro from "./components/RelatorioFinanceiro";
 import RelatorioServicos from "./components/RelatorioServicos";
 import DetalhesObra from "./components/DetalhesObra";
@@ -46,6 +47,7 @@ export default function App() {
       case "construtoras": return <Construtoras />;
       case "obras": return <Obras />;
       case "atividades": return <Atividades />;
+      case "agenda": return <Agenda />;
       case "relatoriofinanceiro": return <RelatorioFinanceiro />;
       case "relatorioservicos": return <RelatorioServicos />;
       case "detalhesobra": return <DetalhesObra />;
@@ -87,6 +89,13 @@ export default function App() {
             </>
           )}
           <button onClick={() => { setSelectedPage("atividades"); setMenuAberto(false); }} className="text-left hover:text-blue-600">📋 Atividades</button>
+          <button
+  onClick={() => { setSelectedPage("agenda"); setMenuAberto(false); }}
+  className="text-left hover:text-blue-600"
+>
+  📆 Agenda
+</button>
+
           <button onClick={() => { setSelectedPage("tarefas"); setMenuAberto(false); }} className="text-left hover:text-blue-600">📝 Lista de Tarefas</button>
           {(usuarioLogado.tipo === "admin" || usuarioLogado.tipo === "gestor") && (
             <>
