@@ -13,10 +13,8 @@ import {
   subWeeks,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
-const logoURL = "/CD LOCACOES.png"; // coloque o arquivo na pasta public
+const logoURL = "/CD LOCACOES.png";
 
 type Atividade = {
   id: string;
@@ -49,7 +47,6 @@ export default function Agenda() {
 
   const inicioMes = startOfMonth(referencia);
   const fimMes = endOfMonth(referencia);
-
   const diasDoMes = eachDayOfInterval({ start: inicioMes, end: fimMes });
 
   const primeiroDiaSemana = getDay(inicioMes) || 7;
@@ -61,6 +58,9 @@ export default function Agenda() {
   const hoje = new Date();
 
   const exportarPDF = async () => {
+    const { default: html2canvas } = await import("html2canvas");
+    const { default: jsPDF } = await import("jspdf");
+
     const element = document.getElementById("agenda-mensal");
     if (!element) return;
 
@@ -94,17 +94,13 @@ export default function Agenda() {
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setModo("semana")}
-          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${
-            modo === "semana" ? "bg-black text-white" : "bg-gray-200 text-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${modo === "semana" ? "bg-black text-white" : "bg-gray-200 text-gray-700"}`}
         >
           Semana
         </button>
         <button
           onClick={() => setModo("mensal")}
-          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${
-            modo === "mensal" ? "bg-black text-white" : "bg-gray-200 text-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${modo === "mensal" ? "bg-black text-white" : "bg-gray-200 text-gray-700"}`}
         >
           Mês
         </button>
