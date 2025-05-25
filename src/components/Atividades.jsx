@@ -145,7 +145,7 @@ export default function Atividades() {
           <option value="">Serviço</option>
           {form.equipamento === "Mini Grua" ? (
             <>
-              <option>Ascenção</option>
+              <option>Ascensão</option>
               <option>Instalação</option>
               <option>Manutenção</option>
               <option>Remoção</option>
@@ -270,14 +270,13 @@ export default function Atividades() {
             >
               <strong>{item.servico} - {item.equipamento}</strong>
               <span className="text-xs font-semibold text-gray-500">
-                Status: {item.dataLiberacao
-                  ? "CONCLUÍDO"
-                  : item.iniciado
-                  ? "EM ANDAMENTO"
-                  : new Date(item.dataAgendamento) > new Date()
-                  ? "AGENDADO"
-                  : ""}
-              </span>
+  Status: {item.dataLiberacao
+    ? "CONCLUÍDO"
+    : item.iniciado
+    ? "EM ANDAMENTO"
+    : "AGENDADO"}
+</span>
+
               <span>{item.construtora} | {item.obra}</span>
               <span>{tamanhoInfo}</span>
               <span>Ancoragem: {item.ancoragem}</span>
