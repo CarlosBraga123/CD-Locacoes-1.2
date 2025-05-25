@@ -14,6 +14,8 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+const logoURL = "/CD LOCACOES.png";
+
 type Atividade = {
   id: string;
   obra: string;
@@ -39,8 +41,46 @@ export default function Agenda() {
 
   const obterStatus = (a: Atividade) => {
     if (a.dataLiberacao) return "CONCLUÍDO";
-    if (!a.dataLiberacao && new Date(a.dataAgendamento) <= new Date()) return "EM ANDAMENTO";
+    if ((a as any).iniciado) return "EM ANDAMENTO";
     return "AGENDADO";
+  };
+  
+
+  const inicioMes = startOfMonth(referencia);
+  const fimMes = endOfMonth(referencia);
+  const diasDoMes = eachDayOfInterval({ start: inicioMes, end: fimMes });
+
+  const primeiroDiaSemana = getDay(inicioMes) || 7;
+  const diasAntes = Array.from({ length: primeiroDiaSemana - 1 }, () => null);
+  const totalCelas = diasAntes.length + diasDoMes.length;
+  const diasDepois = Array.from({ length: 42 - totalCelas }, () => null);
+
+  const calendarioCompleto = [...diasAntes, ...diasDoMes, ...diasDepois];
+  const hoje = new Date();
+
+  const exportarPDF = async () => {
+    const { default: html2canvas } = await import("html2canvas");
+    const { default: jsPDF } = await import("jspdf");
+
+    const element = document.getElementById("agenda-mensal");
+    if (!element) return;
+
+    const canvas = await html2canvas(element);
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width, canvas.height + 100] });
+
+    const logo = new Image();
+    logo.src = logoURL;
+    await new Promise((resolve) => (logo.onload = resolve));
+
+    pdf.addImage(logo, "PNG", canvas.width / 2 - 80, 10, 160, 40);
+    const titulo = `Agenda de ${format(referencia, "MMMM yyyy", { locale: ptBR })}`;
+    pdf.setFontSize(18);
+    pdf.text(titulo, canvas.width / 2, 65, { align: "center" });
+    pdf.addImage(imgData, "PNG", 0, 90, canvas.width, canvas.height);
+
+    const nomeArquivo = `agenda-${format(referencia, "MMMM-yyyy", { locale: ptBR }).toLowerCase()}.pdf`;
+    pdf.save(nomeArquivo);
   };
 
   const atividadesPorDia = diasDaSemana.map((dia) => {
@@ -48,36 +88,31 @@ export default function Agenda() {
     return { dia, atividades: atividadesDoDia };
   });
 
-  const inicioMes = startOfMonth(referencia);
-  const fimMes = endOfMonth(referencia);
-  const diasDoMes = eachDayOfInterval({ start: inicioMes, end: fimMes });
-
-  const atividadesNoMes = diasDoMes.map((dia) => {
-    const atividadesDoDia = atividades.filter((a) => isSameDay(baseData(a), dia));
-    return { dia, atividades: atividadesDoDia };
-  });
-
   return (
-    <div className="p-4">
+    <div className="p-4 overflow-x-auto">
       <h2 className="text-xl font-semibold mb-4">Agenda</h2>
 
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setModo("semana")}
-          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${
-            modo === "semana" ? "bg-black text-white" : "bg-gray-200 text-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${modo === "semana" ? "bg-black text-white" : "bg-gray-200 text-gray-700"}`}
         >
           Semana
         </button>
         <button
           onClick={() => setModo("mensal")}
-          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${
-            modo === "mensal" ? "bg-black text-white" : "bg-gray-200 text-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-full shadow text-sm font-medium ${modo === "mensal" ? "bg-black text-white" : "bg-gray-200 text-gray-700"}`}
         >
           Mês
         </button>
+        {modo === "mensal" && (
+          <button
+            onClick={exportarPDF}
+            className="ml-auto px-4 py-2 rounded-full bg-blue-600 text-white text-sm shadow"
+          >
+            Exportar PDF
+          </button>
+        )}
       </div>
 
       {modo === "semana" && (
@@ -107,11 +142,7 @@ export default function Agenda() {
                     {atividades.map((a) => (
                       <li key={a.id} className="text-sm text-gray-800">
                         <strong>{a.construtora} - {a.obra}</strong> — {a.servico} ({a.equipamento})
-                        <span
-                          className={`ml-2 text-xs font-semibold ${
-                            obterStatus(a) === "CONCLUÍDO" ? "text-green-600" : "text-gray-500"
-                          }`}
-                        >
+                        <span className={`ml-2 text-xs font-semibold ${obterStatus(a) === "CONCLUÍDO" ? "text-green-600" : "text-gray-500"}`}>
                           {obterStatus(a)}
                         </span>
                       </li>
@@ -125,85 +156,48 @@ export default function Agenda() {
       )}
 
       {modo === "mensal" && (
-        <>
-          <div className="grid grid-cols-7 gap-1 text-center text-sm text-gray-700">
+        <div className="w-full overflow-x-auto">
+          <div
+            id="agenda-mensal"
+            style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(120px, 1fr))", gap: "6px" }}
+            className="min-w-[980px]"
+          >
             {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((dia) => (
-              <div key={dia} className="font-semibold mb-1">
+              <div key={dia} className="text-center font-semibold text-gray-600 p-2 border-b">
                 {dia}
               </div>
             ))}
-            {(() => {
-              const primeiroDiaSemana = getDay(inicioMes) || 7;
-              const vazios = Array.from({ length: primeiroDiaSemana - 1 });
-              return [
-                ...vazios.map((_, i) => <div key={`vazio-${i}`}></div>),
-                ...atividadesNoMes.map(({ dia, atividades }) => (
-                  <div
-                    key={dia.toISOString()}
-                    onClick={() => setDiaSelecionado(dia)}
-                    className="bg-white rounded-xl shadow p-1 min-h-[60px] text-xs flex flex-col items-start cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="font-semibold text-gray-800">{format(dia, "d")}</div>
-                    {atividades.map((a) => (
-                      <div key={a.id} className="text-left text-[11px] w-full">
-                        <span className="block font-medium truncate">
+            {calendarioCompleto.map((dia, i) => {
+              const atividadesDoDia = dia ? atividades.filter((a) => isSameDay(baseData(a), dia)) : [];
+              const isHoje = dia && isSameDay(dia, hoje);
+              return (
+                <div
+                  key={i}
+                  onClick={() => dia && setDiaSelecionado(dia)}
+                  className={`border rounded-lg bg-white min-h-[120px] p-2 text-xs flex flex-col items-start justify-start hover:bg-gray-100 cursor-pointer ${isHoje ? "border-blue-500" : "border-gray-300"}`}
+                >
+                  <div className={`font-semibold mb-1 ${isHoje ? "text-blue-600" : "text-gray-800"}`}>
+                    {dia ? format(dia, "d") : ""}
+                  </div>
+                  {atividadesDoDia.length === 0 ? (
+                    <span className="text-[10px] text-gray-400">Sem atividades</span>
+                  ) : (
+                    atividadesDoDia.map((a) => (
+                      <div key={a.id} className="leading-tight text-[10px] text-gray-700">
+                        <span className="block truncate font-medium">
                           {a.servico} — {a.obra} ({a.construtora})
                         </span>
-                        <span
-                          className={`text-[10px] ${
-                            obterStatus(a) === "CONCLUÍDO" ? "text-green-600" : "text-gray-500"
-                          }`}
-                        >
+                        <span className={`text-[10px] ${obterStatus(a) === "CONCLUÍDO" ? "text-green-600" : "text-gray-500"}`}>
                           {obterStatus(a)}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                )),
-              ];
-            })()}
+                    ))
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          {diaSelecionado && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">
-                Detalhes do dia {format(diaSelecionado, "dd/MM/yyyy")}
-              </h3>
-              <ul className="space-y-2">
-                {atividades
-                  .filter((a) => isSameDay(baseData(a), diaSelecionado))
-                  .map((a) => (
-                    <li key={a.id} className="bg-white rounded-xl shadow p-3 text-sm">
-                      <div>
-                        <strong>Obra:</strong> {a.obra}
-                      </div>
-                      <div>
-                        <strong>Construtora:</strong> {a.construtora}
-                      </div>
-                      <div>
-                        <strong>Serviço:</strong> {a.servico}
-                      </div>
-                      <div>
-                        <strong>Equipamento:</strong> {a.equipamento}
-                      </div>
-                      <div>
-                        <strong>Status:</strong>{" "}
-                        <span
-                          className={`${
-                            obterStatus(a) === "CONCLUÍDO"
-                              ? "text-green-600"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {obterStatus(a)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
-        </>
+        </div>
       )}
     </div>
   );
