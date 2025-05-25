@@ -13,22 +13,39 @@ export default function DetalhesObra() {
     setAtividades(atividadesSalvas);
   }, []);
 
+  const formatarData = (data) => {
+    if (!data) return "";
+    const [y, m, d] = data.split("-");
+    return `${d}/${m}/${y}`;
+  };
+
   const calcularAtivos = (obraNome, equipamento) => {
-    const atividadesObra = atividades.filter(a =>
-      a.obra === obraNome &&
-      a.equipamento === equipamento &&
-      a.dataLiberacao &&
-      a.servico === "Instalação"
-    );
-    return atividadesObra.length;
+    const instalacoes = atividades.filter(
+      (a) =>
+        a.obra === obraNome &&
+        a.equipamento === equipamento &&
+        a.servico === "Instalação" &&
+        a.dataLiberacao
+    ).length;
+
+    const remocoes = atividades.filter(
+      (a) =>
+        a.obra === obraNome &&
+        a.equipamento === equipamento &&
+        a.servico === "Remoção" &&
+        a.dataLiberacao
+    ).length;
+
+    return instalacoes - remocoes;
   };
 
   const contarServicos = (obraNome, equipamento, servico) => {
-    return atividades.filter(a =>
-      a.obra === obraNome &&
-      a.equipamento === equipamento &&
-      a.servico === servico &&
-      a.dataLiberacao
+    return atividades.filter(
+      (a) =>
+        a.obra === obraNome &&
+        a.equipamento === equipamento &&
+        a.servico === servico &&
+        a.dataLiberacao
     ).length;
   };
 
@@ -106,7 +123,7 @@ export default function DetalhesObra() {
                 <li key={s.id} className="border p-2 rounded bg-gray-50">
                   <strong>{s.servico}</strong> - {s.equipamento}
                   {s.tamanho && s.equipamento === "Balancinho" ? ` [${s.tamanho}m]` : ""} <br />
-                  Agendado: {s.dataAgendamento} — Liberado: {s.dataLiberacao || "—"}
+                  Agendado: {formatarData(s.dataAgendamento)} — Liberado: {s.dataLiberacao ? formatarData(s.dataLiberacao) : "—"}
                 </li>
               ))}
             </ul>
